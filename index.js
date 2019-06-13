@@ -1,14 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const join = require('path').join;
 const Bagpipe = require('bagpipe'); // 防止过载
+const chalk = require('chalk');
 let bagpipe = new Bagpipe(2);
-const rule = require('./rule')
+const rule = require('./rule');
 
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
+  prompt: '-> ',
 });
 
 const text = rule.text;
@@ -16,10 +17,36 @@ const ignoreDir = rule.ignoreDir;
 const ignoreFile = rule.ignoreFile;
 const notcopy = rule.notcopy;
 
-let newPath;
+console.log(chalk.green('输入路径，可以是文件或者文件夹。'), '（输入', chalk.yellow('exit'),'退出操作）', chalk.gray('建议：直接将文件或者文件夹拖入命令窗口'));
+rl.prompt();
 
-console.log('输入路径')
 rl.on('line', function(line) {
+
+  if(line.trim() === 'exit'){
+    console.log(chalk.green('bye bye'));
+    process.exit(0);
+  }else{
+    //以同步的方法检测目录是否存在。
+    const b = fs.existsSync(line);
+    if(b){
+      if(/^win/.test(process.platform)){
+        initWin(line);
+      }else{
+        initMac(line);
+      }
+      console.log('处理完成');
+    }else{
+      console.log(chalk.red('error'), '路径不正确，请重新输入');
+      rl.prompt();
+    }
+  }
+});
+
+function initMac(line) {
+
+}
+
+function initWin(line){
   // 根据输入的文件地址，在同级目录创建新的文件夹
   let newPathArr = line.split('\\');
   let lastName = newPathArr.pop();
@@ -27,7 +54,7 @@ rl.on('line', function(line) {
     lastName = newPathArr.pop();
   }
   newPathArr.push(lastName + '2replace');
-  newPath = newPathArr.join('\\');
+  const newPath = newPathArr.join('\\');
 
   let isExists = fs.existsSync(newPath);
   if (!isExists) {
@@ -37,8 +64,8 @@ rl.on('line', function(line) {
       }
     });
   }
-  readFile(line, newPath)
-})
+  readFile(line, newPath);
+}
 
 //文件遍历方法
 function readFile(filePath, newPath, isIgnoreDir = false) {
@@ -69,7 +96,7 @@ function readFile(filePath, newPath, isIgnoreDir = false) {
               if (!isIgnore && !isIgnoreDir) {
                 let content = fs.readFileSync(filedir, 'utf-8');
                 content = replaceRule(content);
-                fs.writeFile(newFilePath, content, (err) => {
+                fs.writeFileSync(newFilePath, content, (err) => {
                   if (err) {
                     console.log(err);
                   } else {
@@ -77,7 +104,6 @@ function readFile(filePath, newPath, isIgnoreDir = false) {
                   }
                 });
               } else {
-
                 // 防止过载
                 bagpipe.push(function(filedir, newFilePath, callback) {
                   let readable = fs.createReadStream(filedir); //创建读取流
@@ -89,16 +115,14 @@ function readFile(filePath, newPath, isIgnoreDir = false) {
                   // 不会因为文件描述符过多出错
                   // 妥妥的
                 });
-                console.log('Finished ' + newFilePath)
-              }
+                console.log('Finished ' + newFilePath);
 
+              }
             }
             // 如果是文件夹，则在新目录内创建文件夹
             if (isDir) {
               let isNotcopy = notcopy.some(v => filename === v);
-
               if (!isNotcopy) {
-
                 // 判断文件夹是否存在，不存在则创建
                 let isExists = fs.existsSync(newFilePath);
                 if (!isExists) {
@@ -110,9 +134,7 @@ function readFile(filePath, newPath, isIgnoreDir = false) {
                 }
                 let isIgnoreDir = ignoreDir.some(v => filename === v);
                 readFile(filedir, newFilePath); //递归，如果是文件夹，就继续遍历该文件夹下面的文件
-
               }
-
             }
           }
         })
