@@ -101,14 +101,7 @@ const dealFile = (filePath, newFilePath, isIgnoreDir = false) => {
       }
     });
   } else {
-    let content = fs.readFileSync(filePath);
-    fs.writeFileSync(newFilePath, content, (err) => {
-      if (err) {
-        console.log(err);
-      } else {
-        console.log('Finished ' + newFilePath);
-      }
-    });
+    fs.copyFileSync(filePath, newFilePath);
   }
 }
 
