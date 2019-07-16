@@ -17,7 +17,6 @@ const notcopy = rule.notcopy;
 
 console.log(chalk.green('输入路径，可以是文件或者文件夹。'), '（输入', chalk.yellow('exit'),'退出操作）', chalk.gray('建议：直接将文件或者文件夹拖入命令窗口'));
 rl.prompt();
-
 rl.on('line', function(line) {
 
   if(line.trim() === 'exit'){
@@ -27,11 +26,7 @@ rl.on('line', function(line) {
     //以同步的方法检测目录是否存在。
     const b = fs.existsSync(line);
     if(b){
-      if(/^win/.test(process.platform)){
-        initWin(line);
-      }else{
-        initMac(line);
-      }
+      init(line);
       console.log(chalk.green('处理完成'));
       process.exit(0);
     }else{
@@ -41,32 +36,19 @@ rl.on('line', function(line) {
   }
 });
 
-const initMac = (line) => {
-
-}
-
-const initWin = (line) => {
+const init = (line) => {
   const stats = fs.statSync(line);
   const isFile = stats.isFile(); // 是文件
   const isDir = stats.isDirectory(); // 是文件夹
-
-  const newPathArr = line.split('\\');
-  const lastName = newPathArr.pop();
-  if (!lastName) {
-    lastName = newPathArr.pop();
-  }
+  const parseObj = path.parse(line);
 
   if(isFile){
-    let extname = path.extname(line); // 后缀名
-    const newPath = newPathArr.join('\\') + '\\';
-
-    dealFile(line, newPath + lastName.split('.')[0] + '2replace' + extname);
+    dealFile(line, path.join(parseObj.dir, parseObj.name +  '2replace' + parseObj.ext));
   }
 
   if(isDir){
     // 根据输入的文件地址，在同级目录创建新的文件夹 
-    newPathArr.push(lastName + '2replace');
-    const newPath = newPathArr.join('\\');
+    const newPath = path.join(parseObj.dir, parseObj.name + '2replace');
     const isExists = fs.existsSync(newPath);
     if (!isExists) {
       fs.mkdir(newPath, function(err) {
@@ -93,16 +75,11 @@ const dealFile = (filePath, newFilePath, isIgnoreDir = false) => {
   if (!isIgnore && !isIgnoreDir) {
     let content = fs.readFileSync(filePath, 'utf-8');
     content = replaceRule(content);
-    fs.writeFileSync(newFilePath, content, (err) => {
-      if (err) {
-        console.log(err);
-      } else {
-        console.log('Finished ' + newFilePath);
-      }
-    });
+    fs.writeFileSync(newFilePath, content);
   } else {
     fs.copyFileSync(filePath, newFilePath);
   }
+  console.log('Finished ' + newFilePath);
 }
 
 /**
